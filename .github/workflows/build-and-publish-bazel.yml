@@ -132,23 +132,24 @@ jobs:
       - name: Build Bazel
         run: |
           set -euo pipefail
-          remote_args=()
+          build_args=(
+            --verbose_failures
+            --compilation_mode=opt
+            --jobs=2
+            --stamp
+            "--embed_label=${RELEASE_TAG}"
+            //src:bazel
+          )
           if [[ -n "${BUILDBUDDY_API_KEY}" ]]; then
-            remote_args+=(
+            build_args=(
               --config=buildbuddy-cache
               "--remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
+              "${build_args[@]}"
             )
           else
             echo 'BUILDBUDDY_API_KEY is unavailable; building without the remote cache.'
           fi
-          ./bazelisk --batch --nohome_rc --nosystem_rc build \
-            "${remote_args[@]}" \
-            --verbose_failures \
-            --compilation_mode=opt \
-            --jobs=2 \
-            --stamp \
-            "--embed_label=${RELEASE_TAG}" \
-            //src:bazel
+          ./bazelisk --batch --nohome_rc --nosystem_rc build "${build_args[@]}"
 
       - name: Verify and package Bazel
         env:
