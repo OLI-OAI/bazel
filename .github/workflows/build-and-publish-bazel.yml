@@ -132,19 +132,24 @@ jobs:
       - name: Build Bazel
         run: |
           set -euo pipefail
-          if [[ -z "${BUILDBUDDY_API_KEY}" ]]; then
-            echo 'Missing the BUILDBUDDY_API_KEY Actions secret.' >&2
-            exit 1
-          fi
-          ./bazelisk --batch --nohome_rc --nosystem_rc build \
-            --config=buildbuddy-cache \
-            "--remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}" \
-            --verbose_failures \
-            --compilation_mode=opt \
-            --jobs=2 \
-            --stamp \
-            "--embed_label=${RELEASE_TAG}" \
+          build_args=(
+            --verbose_failures
+            --compilation_mode=opt
+            --jobs=2
+            --stamp
+            "--embed_label=${RELEASE_TAG}"
             //src:bazel
+          )
+          if [[ -n "${BUILDBUDDY_API_KEY}" ]]; then
+            build_args=(
+              --config=buildbuddy-cache
+              "--remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
+              "${build_args[@]}"
+            )
+          else
+            echo 'BUILDBUDDY_API_KEY is unavailable; building without the remote cache.'
+          fi
+          ./bazelisk --batch --nohome_rc --nosystem_rc build "${build_args[@]}"
 
       - name: Verify and package Bazel
         env:
